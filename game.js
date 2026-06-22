@@ -23,6 +23,10 @@ const bracketTitle = document.getElementById("bracketTitle");
 const bracketGrid = document.getElementById("bracketGrid");
 const continueTournamentButton = document.getElementById("continueTournament");
 const restartTournamentButton = document.getElementById("restartTournament");
+const celebrationScreen = document.getElementById("celebrationScreen");
+const celebrationTitle = document.getElementById("celebrationTitle");
+const celebrationScene = document.getElementById("celebrationScene");
+const showChampionBracketButton = document.getElementById("showChampionBracket");
 
 const W = 960;
 const H = 540;
@@ -243,7 +247,11 @@ function finishTournamentMatch() {
   state.role = "done";
   state.message = playerWon ? "Tu avances" : "Tu es éliminé";
   primaryAction.textContent = "Bracket";
-  showBracket();
+  if (tournament.champion === selectedTeam) {
+    showCelebration();
+  } else {
+    showBracket();
+  }
   updateHud();
 }
 
@@ -284,6 +292,7 @@ function renderBracketRound(roundIndex) {
 function showBracket() {
   if (!tournament) return;
 
+  celebrationScreen.classList.add("hidden");
   const championText = tournament.champion
     ? `Champion: ${teamName(tournament.champion)}`
     : tournament.eliminated
@@ -294,6 +303,37 @@ function showBracket() {
   bracketGrid.innerHTML = [0, 1, 2].map(renderBracketRound).join("");
   continueTournamentButton.textContent = tournament.champion || tournament.eliminated ? "Nouveau tournoi" : "Prochain match";
   bracketScreen.classList.remove("hidden");
+}
+
+function showCelebration() {
+  const kit = team();
+  celebrationTitle.textContent = `${kit.label} gagne le tournoi`;
+  celebrationScene.style.setProperty("--kit-primary", kit.primary);
+  celebrationScene.style.setProperty("--kit-secondary", kit.secondary);
+
+  const players = [0, 1, 2, 3].map((index) => `
+    <div class="celebration-player" style="--delay: ${index * 0.12}s">
+      <div class="celebration-arms"></div>
+      <div class="celebration-body"></div>
+    </div>
+  `);
+
+  const confetti = Array.from({ length: 22 }, (_, index) => {
+    const colors = ["#f4bf4f", "#43c7d8", kit.primary, kit.secondary, "#f7faf7"];
+    return `<span class="confetti" style="--left: ${4 + index * 4.3}%; --delay: ${-(index % 7) * 0.22}s; --confetti: ${colors[index % colors.length]}"></span>`;
+  }).join("");
+
+  celebrationScene.innerHTML = `
+    ${confetti}
+    ${players.slice(0, 2).join("")}
+    <div class="trophy-wrap">
+      <div class="trophy"></div>
+      <div class="trophy-base"></div>
+    </div>
+    ${players.slice(2).join("")}
+  `;
+  bracketScreen.classList.add("hidden");
+  celebrationScreen.classList.remove("hidden");
 }
 
 function advanceTournament() {
@@ -1065,6 +1105,7 @@ function reset(showMenu = false) {
   lastFrameTime = performance.now();
   state = freshState();
   bracketScreen.classList.add("hidden");
+  celebrationScreen.classList.add("hidden");
   if (showMenu) {
     tournament = null;
     state.phase = "menu";
@@ -1135,6 +1176,7 @@ teamButtons.forEach((button) => {
 startGameButton.addEventListener("click", startMatch);
 continueTournamentButton.addEventListener("click", advanceTournament);
 restartTournamentButton.addEventListener("click", () => reset(true));
+showChampionBracketButton.addEventListener("click", showBracket);
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", (event) => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
