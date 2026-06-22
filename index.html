@@ -18,7 +18,7 @@
           <span id="roleLabel">Tireur</span>
         </div>
         <div class="team away">
-          <span class="team-label">IA</span>
+          <span class="team-label" id="aiTeamLabel">IA</span>
           <strong id="aiScore">0</strong>
         </div>
       </section>
@@ -79,8 +79,24 @@
                 <span>Grande zone</span>
               </button>
             </div>
-            <button class="start-button" id="startGame" type="button">Commencer le match</button>
+            <button class="start-button" id="startGame" type="button">Commencer le tournoi</button>
           </div>
+        </div>
+      </section>
+
+      <section class="bracket-screen hidden" id="bracketScreen" aria-label="Bracket du tournoi">
+        <div class="bracket-panel">
+          <div class="bracket-head">
+            <div>
+              <p class="eyebrow">Tournoi</p>
+              <h2 id="bracketTitle">Bracket</h2>
+            </div>
+            <div class="bracket-actions">
+              <button id="continueTournament" type="button">Continuer</button>
+              <button id="restartTournament" type="button" class="secondary">Recommencer</button>
+            </div>
+          </div>
+          <div class="bracket-grid" id="bracketGrid"></div>
         </div>
       </section>
 

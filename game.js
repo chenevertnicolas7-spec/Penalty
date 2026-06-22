@@ -4,6 +4,7 @@ const ctx = canvas.getContext("2d");
 const playerScoreEl = document.getElementById("playerScore");
 const aiScoreEl = document.getElementById("aiScore");
 const playerTeamLabel = document.getElementById("playerTeamLabel");
+const aiTeamLabel = document.getElementById("aiTeamLabel");
 const roundLabel = document.getElementById("roundLabel");
 const roleLabel = document.getElementById("roleLabel");
 const toast = document.getElementById("toast");
@@ -17,6 +18,11 @@ const homeScreen = document.getElementById("homeScreen");
 const difficultyButtons = document.querySelectorAll("[data-difficulty]");
 const teamButtons = document.querySelectorAll("[data-team]");
 const startGameButton = document.getElementById("startGame");
+const bracketScreen = document.getElementById("bracketScreen");
+const bracketTitle = document.getElementById("bracketTitle");
+const bracketGrid = document.getElementById("bracketGrid");
+const continueTournamentButton = document.getElementById("continueTournament");
+const restartTournamentButton = document.getElementById("restartTournament");
 
 const W = 960;
 const H = 540;
@@ -70,7 +76,11 @@ const TEAMS = {
   bayern: { label: "Bayern Munich", short: "Bayern", primary: "#dc052d", secondary: "#f7faf7" },
 };
 
+const TEAM_ORDER = ["real", "barca", "psg", "arsenal", "city", "liverpool", "inter", "bayern"];
+const ROUND_NAMES = ["Quarts de finale", "Demi-finales", "Finale"];
+
 let state;
+let tournament = null;
 let selectedDifficulty = "normal";
 let selectedTeam = "real";
 let lastFrameTime = performance.now();
@@ -111,6 +121,15 @@ function team() {
   return TEAMS[selectedTeam];
 }
 
+function currentOpponentKey() {
+  return tournament?.currentOpponent || null;
+}
+
+function currentOpponent() {
+  const key = currentOpponentKey();
+  return key ? TEAMS[key] : null;
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -129,6 +148,166 @@ function distance(a, b) {
 
 function randomBetween(min, max) {
   return min + Math.random() * (max - min);
+}
+
+function shuffle(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function createTournament() {
+  const opponents = shuffle(TEAM_ORDER.filter((key) => key !== selectedTeam));
+  const quarterMatches = [
+    [selectedTeam, opponents[0]],
+    [opponents[1], opponents[2]],
+    [opponents[3], opponents[4]],
+    [opponents[5], opponents[6]],
+  ];
+
+  return {
+    roundIndex: 0,
+    playerMatchIndex: 0,
+    currentOpponent: opponents[0],
+    eliminated: false,
+    champion: null,
+    matches: [
+      quarterMatches,
+      [[null, null], [null, null]],
+      [[null, null]],
+    ],
+    winners: [
+      [null, null, null, null],
+      [null, null],
+      [null],
+    ],
+    lastResult: "",
+  };
+}
+
+function simulateMatch(teamA, teamB) {
+  if (!teamA) return teamB;
+  if (!teamB) return teamA;
+  const rating = {
+    real: 58,
+    barca: 56,
+    psg: 55,
+    arsenal: 54,
+    city: 59,
+    liverpool: 56,
+    inter: 54,
+    bayern: 57,
+  };
+  const total = rating[teamA] + rating[teamB];
+  return Math.random() * total < rating[teamA] ? teamA : teamB;
+}
+
+function fillRoundAfterPlayerMatch(playerWinner) {
+  const round = tournament.roundIndex;
+  const playerMatch = tournament.playerMatchIndex;
+  tournament.winners[round][playerMatch] = playerWinner;
+
+  tournament.matches[round].forEach((match, index) => {
+    if (!tournament.winners[round][index]) {
+      tournament.winners[round][index] = simulateMatch(match[0], match[1]);
+    }
+  });
+
+  if (round < 2) {
+    const nextMatches = [];
+    for (let i = 0; i < tournament.winners[round].length; i += 2) {
+      nextMatches.push([tournament.winners[round][i], tournament.winners[round][i + 1]]);
+    }
+    tournament.matches[round + 1] = nextMatches;
+  } else {
+    tournament.champion = playerWinner;
+  }
+}
+
+function finishTournamentMatch() {
+  const playerWon = state.playerScore > state.aiScore;
+  const winner = playerWon ? selectedTeam : currentOpponentKey();
+
+  fillRoundAfterPlayerMatch(winner);
+  tournament.eliminated = !playerWon;
+  tournament.lastResult = playerWon ? "Victoire" : "Élimination";
+
+  if (playerWon && tournament.roundIndex === 2) {
+    tournament.champion = selectedTeam;
+  }
+
+  state.phase = "bracket";
+  state.role = "done";
+  state.message = playerWon ? "Tu avances" : "Tu es éliminé";
+  primaryAction.textContent = "Bracket";
+  showBracket();
+  updateHud();
+}
+
+function teamName(key) {
+  return key ? TEAMS[key].short : "À venir";
+}
+
+function renderBracketTeam(key, winnerKey) {
+  const classNames = ["bracket-team"];
+  if (!key) classNames.push("empty");
+  if (key && key === winnerKey) classNames.push("winner");
+  if (key === selectedTeam) classNames.push("player");
+  const status = key && key === winnerKey ? "<small>Gagnant</small>" : "";
+  return `<div class="${classNames.join(" ")}"><span>${teamName(key)}</span>${status}</div>`;
+}
+
+function renderBracketRound(roundIndex) {
+  const matches = tournament.matches[roundIndex];
+  const winners = tournament.winners[roundIndex];
+  const rows = matches.map((match, index) => {
+    const winner = winners[index];
+    return `
+      <div class="bracket-match">
+        ${renderBracketTeam(match[0], winner)}
+        ${renderBracketTeam(match[1], winner)}
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="bracket-round">
+      <h3>${ROUND_NAMES[roundIndex]}</h3>
+      ${rows}
+    </div>
+  `;
+}
+
+function showBracket() {
+  if (!tournament) return;
+
+  const championText = tournament.champion
+    ? `Champion: ${teamName(tournament.champion)}`
+    : tournament.eliminated
+      ? `${teamName(selectedTeam)} éliminé`
+      : `${ROUND_NAMES[tournament.roundIndex]} terminé`;
+
+  bracketTitle.textContent = championText;
+  bracketGrid.innerHTML = [0, 1, 2].map(renderBracketRound).join("");
+  continueTournamentButton.textContent = tournament.champion || tournament.eliminated ? "Nouveau tournoi" : "Prochain match";
+  bracketScreen.classList.remove("hidden");
+}
+
+function advanceTournament() {
+  if (!tournament || tournament.eliminated || tournament.champion) {
+    reset(true);
+    return;
+  }
+
+  tournament.roundIndex += 1;
+  const roundMatches = tournament.matches[tournament.roundIndex];
+  tournament.playerMatchIndex = roundMatches.findIndex((match) => match.includes(selectedTeam));
+  tournament.currentOpponent = roundMatches[tournament.playerMatchIndex].find((key) => key !== selectedTeam);
+  bracketScreen.classList.add("hidden");
+  reset(false);
 }
 
 function randomZone() {
@@ -462,18 +641,19 @@ function finishShot() {
 
 function endOrContinue() {
   if (state.playerShots.length >= MAX_ROUNDS && state.aiShots.length >= MAX_ROUNDS) {
-    state.phase = "gameOver";
-    state.role = "done";
-    if (state.playerScore > state.aiScore) {
-      state.message = "Victoire";
-    } else if (state.playerScore < state.aiScore) {
-      state.message = "Défaite";
-    } else {
-      state.message = "Égalité";
+    if (state.playerScore === state.aiScore) {
+      const playerWinsTieBreak = Math.random() >= 0.5;
+      if (playerWinsTieBreak) {
+        state.playerScore += 1;
+        state.playerShots.push("goal");
+        state.aiShots.push("miss");
+      } else {
+        state.aiScore += 1;
+        state.playerShots.push("miss");
+        state.aiShots.push("goal");
+      }
     }
-    primaryAction.textContent = "Rejouer";
-    primaryAction.disabled = false;
-    powerInput.disabled = true;
+    finishTournamentMatch();
     return;
   }
 
@@ -507,18 +687,24 @@ function updateTeamButtons() {
 
 function updateHud() {
   playerTeamLabel.textContent = team().short;
+  const opponent = currentOpponent();
+  aiTeamLabel.textContent = opponent ? opponent.short : "IA";
   playerScoreEl.textContent = state.playerScore;
   aiScoreEl.textContent = state.aiScore;
   roundLabel.textContent = state.phase === "menu"
     ? `Difficulté: ${difficulty().label}`
+    : state.phase === "bracket" && tournament
+      ? ROUND_NAMES[tournament.roundIndex]
     : `Manche ${Math.min(state.round, MAX_ROUNDS)} / ${MAX_ROUNDS}`;
   roleLabel.textContent = state.phase === "menu"
     ? "Accueil"
+    : state.phase === "bracket"
+      ? "Bracket"
     : state.role === "keeper" ? "Gardien" : state.role === "done" ? "Terminé" : "Tireur";
   toast.textContent = state.message;
   powerValue.textContent = `${powerInput.value}%`;
   powerInput.disabled = state.role !== "shooter" || state.phase === "animating" || state.phase === "gameOver" || state.phase === "menu";
-  primaryAction.disabled = state.phase === "animating" || state.phase === "menu" || state.phase === "keeperReady";
+  primaryAction.disabled = state.phase === "animating" || state.phase === "menu" || state.phase === "keeperReady" || state.phase === "bracket";
   resetGame.disabled = state.phase === "menu";
   updateMarkers(playerShotsEl, state.playerShots);
   updateMarkers(aiShotsEl, state.aiShots);
@@ -784,7 +970,10 @@ function drawScene() {
     trim: team().secondary,
     gloves: "#f7faf7",
   };
-  const aiKit = { shirt: "#27314a", trim: "#f4bf4f", gloves: "#43c7d8" };
+  const opponent = currentOpponent();
+  const aiKit = opponent
+    ? { shirt: opponent.primary, trim: opponent.secondary, gloves: "#43c7d8" }
+    : { shirt: "#27314a", trim: "#f4bf4f", gloves: "#43c7d8" };
   let keeperPoint = state.role === "keeper"
     ? keeperLinePoint()
     : state.role === "shooter"
@@ -875,7 +1064,9 @@ function reset(showMenu = false) {
   pressedKeys.clear();
   lastFrameTime = performance.now();
   state = freshState();
+  bracketScreen.classList.add("hidden");
   if (showMenu) {
+    tournament = null;
     state.phase = "menu";
     state.role = "menu";
     state.message = "Choisis ton équipe";
@@ -899,6 +1090,7 @@ function selectTeam(key) {
 }
 
 function startMatch() {
+  tournament = createTournament();
   reset(false);
 }
 
@@ -941,6 +1133,8 @@ teamButtons.forEach((button) => {
   button.addEventListener("click", () => selectTeam(button.dataset.team));
 });
 startGameButton.addEventListener("click", startMatch);
+continueTournamentButton.addEventListener("click", advanceTournament);
+restartTournamentButton.addEventListener("click", () => reset(true));
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", (event) => {
   if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.code)) {
@@ -963,7 +1157,11 @@ window.addEventListener("keydown", (event) => {
 
   if (event.code === "Enter" && state.phase !== "keeperReady") {
     event.preventDefault();
-    mainAction();
+    if (state.phase === "bracket") {
+      advanceTournament();
+    } else {
+      mainAction();
+    }
   }
 });
 window.addEventListener("keyup", (event) => {
