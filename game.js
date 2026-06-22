@@ -38,19 +38,22 @@ const ZONES = [
 const DIFFICULTIES = {
   easy: {
     label: "Facile",
-    keeperSaveChance: 0.25,
+    keeperSaveZoneX: 46,
+    keeperSaveZoneY: 52,
     hintLockBeforeShot: 2000,
     aiLineSpeed: 1500,
   },
   normal: {
     label: "Moyen",
-    keeperSaveChance: 0.5,
+    keeperSaveZoneX: 66,
+    keeperSaveZoneY: 70,
     hintLockBeforeShot: 1000,
     aiLineSpeed: 1100,
   },
   hard: {
     label: "Difficile",
-    keeperSaveChance: 0.85,
+    keeperSaveZoneX: 96,
+    keeperSaveZoneY: 96,
     hintLockBeforeShot: 500,
     aiLineSpeed: 760,
   },
@@ -259,11 +262,13 @@ function computePlayerShotResult(ballTarget, aiKeeperStart) {
     return { result: { type: "miss", text: "À côté" }, saved: false };
   }
 
+  const settings = difficulty();
   const keeperBodyTop = KEEPER_HOME.y - 90;
   const keeperBodyBottom = KEEPER_HOME.y + 58;
   const closestBodyY = clamp(ballTarget.y, keeperBodyTop, keeperBodyBottom);
-  const shotAtKeeper = distance(ballTarget, { x: aiKeeperStart.x, y: closestBodyY }) < 64;
-  const saved = shotAtKeeper || Math.random() < difficulty().keeperSaveChance;
+  const normalizedX = (ballTarget.x - aiKeeperStart.x) / settings.keeperSaveZoneX;
+  const normalizedY = (ballTarget.y - closestBodyY) / settings.keeperSaveZoneY;
+  const saved = normalizedX * normalizedX + normalizedY * normalizedY <= 1;
   return {
     result: saved ? { type: "save", text: "Sauvé" } : { type: "goal", text: "But" },
     saved,
@@ -810,9 +815,7 @@ function drawScene() {
     if (state.aiPlan) {
       drawHintZone(state.aiPlan.hint);
     }
-    if (!state.keeper.hasDived) {
-      drawTarget(state.keeperAim, "#43c7d8", "Plongeon");
-    }
+    drawTarget(state.keeperAim, "#43c7d8", state.keeper.hasDived ? "Zone choisie" : "Plongeon");
   }
 
   drawKeeper(keeperPoint, shotProgress, keeperActive, keeperStart, keeperKit);
