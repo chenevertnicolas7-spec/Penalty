@@ -67,6 +67,7 @@ const TEAMS = {
   city: { label: "Manchester City", short: "Man City", primary: "#6cabdd", secondary: "#1c2c5b" },
   liverpool: { label: "Liverpool", short: "Liverpool", primary: "#c8102e", secondary: "#00b2a9" },
   inter: { label: "Inter Milan", short: "Inter", primary: "#010e80", secondary: "#050505" },
+  bayern: { label: "Bayern Munich", short: "Bayern", primary: "#dc052d", secondary: "#f7faf7" },
 };
 
 let state;

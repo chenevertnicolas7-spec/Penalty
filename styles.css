@@ -252,6 +252,10 @@ button.team-card {
   background: linear-gradient(90deg, #010e80 0 50%, #050505 50% 100%);
 }
 
+.team-swatch.bayern {
+  background: linear-gradient(90deg, #dc052d 0 48%, #f7faf7 48% 64%, #0066b2 64% 100%);
+}
+
 button.team-card.selected,
 button.team-card:hover {
   background: rgba(67, 199, 216, 0.2);
