@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Duel Penalty</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="scorebar" aria-label="Tableau de score">
+        <div class="team">
+          <span class="team-label" id="playerTeamLabel">Toi</span>
+          <strong id="playerScore">0</strong>
+        </div>
+        <div class="match-state">
+          <span id="roundLabel">Manche 1 / 5</span>
+          <span id="roleLabel">Tireur</span>
+        </div>
+        <div class="team away">
+          <span class="team-label">IA</span>
+          <strong id="aiScore">0</strong>
+        </div>
+      </section>
+
+      <section class="stadium">
+        <canvas id="gameCanvas" width="960" height="540" aria-label="Jeu de penalty"></canvas>
+        <div class="toast" id="toast">Vise dans le but</div>
+        <div class="home-screen" id="homeScreen">
+          <div class="home-panel">
+            <p class="eyebrow">Duel Penalty</p>
+            <h1>Choisis ton équipe</h1>
+            <div class="team-grid" aria-label="Choix de ton équipe">
+              <button class="team-card selected" type="button" data-team="real">
+                <span class="team-swatch real"></span>
+                <strong>Real Madrid</strong>
+              </button>
+              <button class="team-card" type="button" data-team="barca">
+                <span class="team-swatch barca"></span>
+                <strong>Barça</strong>
+              </button>
+              <button class="team-card" type="button" data-team="psg">
+                <span class="team-swatch psg"></span>
+                <strong>PSG</strong>
+              </button>
+              <button class="team-card" type="button" data-team="arsenal">
+                <span class="team-swatch arsenal"></span>
+                <strong>Arsenal</strong>
+              </button>
+              <button class="team-card" type="button" data-team="city">
+                <span class="team-swatch city"></span>
+                <strong>Manchester City</strong>
+              </button>
+              <button class="team-card" type="button" data-team="liverpool">
+                <span class="team-swatch liverpool"></span>
+                <strong>Liverpool</strong>
+              </button>
+              <button class="team-card" type="button" data-team="inter">
+                <span class="team-swatch inter"></span>
+                <strong>Inter Milan</strong>
+              </button>
+            </div>
+            <h2>Difficulté du gardien IA</h2>
+            <div class="difficulty-grid" aria-label="Difficulté du gardien IA">
+              <button class="difficulty-card" type="button" data-difficulty="easy">
+                <strong>Facile</strong>
+                <span>25% d'arrêts</span>
+              </button>
+              <button class="difficulty-card selected" type="button" data-difficulty="normal">
+                <strong>Moyen</strong>
+                <span>50% d'arrêts</span>
+              </button>
+              <button class="difficulty-card" type="button" data-difficulty="hard">
+                <strong>Difficile</strong>
+                <span>85% d'arrêts</span>
+              </button>
+            </div>
+            <button class="start-button" id="startGame" type="button">Commencer le match</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="control-group">
+          <label for="power">Puissance</label>
+          <input id="power" type="range" min="35" max="100" value="76">
+          <output id="powerValue" for="power">76%</output>
+        </div>
+        <div class="actions">
+          <button id="primaryAction" type="button">Tirer</button>
+          <button id="resetGame" type="button" class="secondary">Rejouer</button>
+        </div>
+      </section>
+
+      <section class="timeline" aria-label="Tirs">
+        <div>
+          <span>TES TIRS</span>
+          <ol id="playerShots" class="markers"></ol>
+        </div>
+        <div>
+          <span>TIRS IA</span>
+          <ol id="aiShots" class="markers"></ol>
+        </div>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
